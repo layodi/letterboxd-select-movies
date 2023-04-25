@@ -1,5 +1,6 @@
 require('dotenv').config();
 const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
 const numMoviesToSelect = process.argv[2] || 2;
 
 (async () => {
@@ -14,18 +15,14 @@ const numMoviesToSelect = process.argv[2] || 2;
   let hasNextPage = true;
   while (hasNextPage) {
     // Get movies on current page
-    const pageMovies = await page.evaluate(() => {
-      const movies = [];
-      const movieElements = document.querySelectorAll('.film-poster');
-      for (let i = 0; i < movieElements.length; i++) {
-        const movie = {};
-        movie.title = movieElements[i].getAttribute('data-film-name');
-        movie.year = parseInt(movieElements[i].getAttribute('data-film-release-year'));
-        movies.push(movie);
-      }
-      return movies;
+    const html = await page.content();
+    const $ = cheerio.load(html);
+    $('.film-poster').each((i, el) => {
+      const movie = {};
+      movie.title = $(el).attr('data-film-name');
+      movie.year = parseInt($(el).attr('data-film-release-year'));
+      movies.push(movie);
     });
-    movies = movies.concat(pageMovies);
 
     // Check if there's a next page
     const nextPageButton = await page.$('a.next:not(.disabled)');
